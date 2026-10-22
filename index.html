@@ -239,19 +239,6 @@ td{white-space:nowrap}
 /* toast */
 .toast{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:#0d0d10;border:1px solid var(--line);border-radius:8px;padding:9px 14px;display:flex;gap:8px;align-items:center;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:calc(100% - 32px)}
 .toast .ic{color:var(--ok)}
-/* tasks drawer */
-.tasks{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;width:min(360px,calc(100% - 32px))}
-.tasks .panel{background:#f4f3fb;color:#1d1b2b;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5);padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:min(70vh,560px);overflow:auto}
-.tasks .panel h4{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#5a5480}
-.tasks ol{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;counter-reset:t}
-.tasks li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:13px}
-.tasks li input{margin-top:2px;accent-color:#5a4fd0}
-.tasks li.done span{color:#8a86a3;text-decoration:line-through}
-.tasks .toggleTasks{background:#f4f3fb;color:#1d1b2b;border:0;border-radius:999px;padding:9px 14px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.45);float:right}
-.tasks .fac{background:#e7e5f5;border-radius:8px;padding:8px 10px;font-size:12px;color:#3d3860}
-.tasks .fac code{font-family:var(--mono)}
-.tasks .row2{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.tasks .row2 button{background:none;border:1px solid #c9c5e4;border-radius:6px;padding:4px 10px;color:#3d3860;font-size:12px}
 /* metrics (matches Figma) */
 .subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft)}
 .subtab{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 8px;font-size:14px;font-weight:500;color:var(--fg-2)}
@@ -337,7 +324,6 @@ td{white-space:nowrap}
 <div id="app"></div>
 <div id="modal"></div>
 <div id="toast"></div>
-<div class="tasks" id="tasks"></div>
 
 <script>
 (function(){
@@ -384,7 +370,7 @@ function initial(){
   g('g212','Rivo Riders','20044319',[c(212,'Rivo Riders','Active',3,1)],null),
   g('g220','Tessera','19883021',[c(220,'Tessera','Active',12,6)],sub('45K')),
   g('g225','Bonpet','21110457',[c(225,'Bonpet','Active',2,1)],sub('5K')),
-  g('g260','Tapfin','18456620',[c(260,'Tapfin','Active',7,3)],sub('15K')),
+  g('g260','Bluebird','18456620',[c(260,'Bluebird','Active',7,3)],sub('15K')),
   g('gLA','Lumen Academy','21847503',[c(3023,'Lumen Academy CO','Active',10,3),c(403,'Lumen Academy US','Active',6,2),c(394,'Lumen Academy PE','Active',4,1),c(498,'Lumen Academy MX','Active',2,0)],
     sub('15K',{planDiscount:15,paidSeats:4,seatPrice:20,conv:[{qty:5000,price:275,disc:0,rec:true},{qty:10000,price:515,disc:0,rec:true},{qty:19500,price:1000,disc:5,rec:true}],ai:[{qty:500,price:140,disc:0,rec:true},{qty:1000,price:275,disc:0,rec:true},{qty:2000,price:550,disc:0,rec:true}]})),
   g('g274','Lixio','22004561',[c(274,'Lixio','Suspended',5,2)],sub('15K')),
@@ -400,17 +386,7 @@ function initial(){
 }
 let data=initial();
 let ui={view:'list',group:null,tab:'status',q:'',open:{},modal:null,form:null,people:{},tasksOpen:true,done:{}};
-const TASKS=[
- 'Find the business group that includes the company Tapfin and open it.',
- 'Create a company called “Lumen Academy AR” inside the Lumen Academy business group.',
- 'Create the company “Nova Foods” in a new business group. Its HubSpot ID is 31415926.',
- 'Open Lumen Academy and suspend Lumen Academy MX. Then bring it back.',
- 'Move the company “Lagoon 2” into Lumen Academy.',
- 'Lumen Academy wants to move to Plan 5K next cycle. Make that change.',
- 'Undo the plan change you just made.',
- 'See which agents Lumen Academy PE has.',
- 'Make Ariel Montes the CS owner of Lumen Academy.'
-];
+
 
 const grp=id=>data.groups.find(g=>g.id===id);
 const allCompanies=()=>data.groups.flatMap(g=>g.companies.map(c=>({...c,group:g})));
@@ -431,7 +407,6 @@ function render(){
  const app=document.getElementById('app');
  app.innerHTML=nav()+`<main class="main">${ui.view==='list'?listView():groupView()}</main>`;
  document.getElementById('modal').innerHTML=ui.modal?modalView():'';
- renderTasks();
  if(aid){const el=document.getElementById(aid);if(el){el.focus();try{if(sel!=null)el.setSelectionRange(sel,sel)}catch(e){}}}
 }
 function nav(){return `<header class="nav"><div class="logo"><span class="wm">${ICON.logo}treble.ai</span><small>Admin</small></div><div class="spacer"></div>
@@ -739,21 +714,6 @@ document.addEventListener('change',e=>{const el=e.target;const a=el.dataset&&el.
   case 'pcomp':ui.people[ui.group]=+el.value;break;
   default:return;}
  render();});
-
-/* ---------- tasks drawer ---------- */
-function renderTasks(){const el=document.getElementById('tasks');
- if(!ui.tasksOpen){el.innerHTML=`<button class="toggleTasks" data-t="open">Test tasks (${Object.values(ui.done).filter(Boolean).length}/${TASKS.length})</button>`;return;}
- el.innerHTML=`<div class="panel"><div class="row2"><h4>Test tasks</h4><button data-t="close">Hide</button></div>
- <ol>${TASKS.map((t,i)=>`<li class="${ui.done[i]?'done':''}"><input type="checkbox" id="task-${i}" data-t="done" data-i="${i}" ${ui.done[i]?'checked':''}><label for="task-${i}"><span>${t}</span></label></li>`).join('')}</ol>
- <details class="fac"><summary>Facilitator notes</summary><p style="margin:6px 0 0">HubSpot test IDs: <code>99999999</code> not found · <code>21847503</code> already linked to Lumen Academy · <code>00000000</code> HubSpot doesn’t respond · any other number is found.</p><p style="margin:6px 0 0">A company name containing <code>fail</code> simulates a server error when creating it.</p></details>
- <div class="row2"><span style="font-size:12px;color:#6b6790">Nothing here is saved.</span><button data-t="reset">Reset prototype</button></div></div>`;}
-document.getElementById('tasks').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;const t=b.dataset.t;
- if(t==='open'){ui.tasksOpen=true;renderTasks();}
- else if(t==='close'){ui.tasksOpen=false;renderTasks();}
- else if(t==='reset'){data=initial();const done={};ui={view:'list',group:null,tab:'status',q:'',open:{},modal:null,form:null,people:{},tasksOpen:true,done};render();toast('Prototype reset');}
-});
-document.getElementById('tasks').addEventListener('change',e=>{const b=e.target;if(b.dataset.t==='done'){ui.done[b.dataset.i]=b.checked;renderTasks();}});
-document.getElementById('modal').addEventListener('click',e=>{/* handled globally */});
 
 render();
 })();
