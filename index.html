@@ -151,6 +151,7 @@ tr.child td:nth-child(2){padding-left:28px}
 .alert.warn{background:var(--warn-soft);border-color:#4d3e17}.alert.warn .ic,.alert.warn .t{color:var(--warn)}.alert.warn .d{color:#e7d6a8}
 .alert.bad{background:var(--bad-soft);border-color:#58271f}.alert.bad .ic,.alert.bad .t{color:var(--bad)}.alert.bad .d{color:#f1c3bb}
 .alert.ok{background:var(--ok-soft);border-color:#215038}.alert.ok .ic,.alert.ok .t{color:var(--ok)}
+.attn{display:flex;flex-direction:column;gap:12px}
 .rowacts{display:flex;gap:6px;justify-content:flex-end;white-space:nowrap}
 td{white-space:nowrap}
 .alert>div{min-width:0}
@@ -228,11 +229,13 @@ td{white-space:nowrap}
 .menu{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#202027;border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.45);z-index:5;padding:6px}
 .menu .s{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;background:var(--bg)}
 .menu .s input{border:0;background:none;outline:none;flex:1;min-width:0}
-.opt{display:flex;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:8px 10px;border-radius:6px;text-align:left}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;height:36px;background:none;border:0;padding:0 10px;border-radius:6px;text-align:left}
+.opt>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .r{flex-shrink:0}
 .opt:hover,.opt:focus-visible{background:var(--panel-2)}
 .opt .r{color:var(--faint);font-size:12px;font-family:var(--mono)}
-.opt.new{border-top:1px solid var(--line-soft);border-radius:0 0 6px 6px;margin-top:4px;padding-top:10px}
-.opts{max-height:240px;overflow:auto}
+.opt.new{border-top:1px solid var(--line-soft);border-radius:0 0 6px 6px;margin-top:4px;height:40px}
+.opts{max-height:216px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 /* toast */
 .toast{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:#0d0d10;border:1px solid var(--line);border-radius:8px;padding:9px 14px;display:flex;gap:8px;align-items:center;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:calc(100% - 32px)}
 .toast .ic{color:var(--ok)}
@@ -396,7 +399,7 @@ function initial(){
 let data=initial();
 let ui={view:'list',group:null,tab:'status',q:'',open:{},modal:null,form:null,people:{},tasksOpen:true,done:{}};
 const TASKS=[
- 'Find the company Tapfin and open it.',
+ 'Find the business group that includes the company Tapfin and open it.',
  'Create a company called “Lumen Academy AR” inside the Lumen Academy business group.',
  'Create the company “Nova Foods” in a new business group. Its HubSpot ID is 31415926.',
  'Open Lumen Academy and suspend Lumen Academy MX. Then bring it back.',
@@ -409,9 +412,9 @@ const TASKS=[
 
 const grp=id=>data.groups.find(g=>g.id===id);
 const allCompanies=()=>data.groups.flatMap(g=>g.companies.map(c=>({...c,group:g})));
-function limits(s){if(!s)return {conv:0,ai:0,seats:0};const p=PLANS[s.plan];return {conv:p.conv+s.conv.reduce((a,b)=>a+b.qty,0),ai:p.ai+s.ai.reduce((a,b)=>a+b.qty,0),seats:p.seats+s.freeSeats+s.paidSeats};}
+function limits(s){if(!s||!PLANS[s.plan])return {conv:0,ai:0,seats:0};const p=PLANS[s.plan];return {conv:p.conv+s.conv.reduce((a,b)=>a+b.qty,0),ai:p.ai+s.ai.reduce((a,b)=>a+b.qty,0),seats:p.seats+s.freeSeats+s.paidSeats};}
 const net=(price,disc)=>Math.round(price*(1-disc/100)*100)/100;
-function cost(s){if(!s)return {plan:0,planList:0,addons:0,addonsList:0,seats:0,total:0};const p=PLANS[s.plan];const plan=net(p.price,s.planDiscount);const seats=s.paidSeats*s.seatPrice;
+function cost(s){if(!s||!PLANS[s.plan])return {plan:0,planList:0,addons:0,addonsList:0,seats:0,total:0};const p=PLANS[s.plan];const plan=net(p.price,s.planDiscount);const seats=s.paidSeats*s.seatPrice;
  const conv=s.conv.reduce((a,b)=>a+net(b.price,b.disc),0),ai=s.ai.reduce((a,b)=>a+net(b.price,b.disc),0);
  const convL=s.conv.reduce((a,b)=>a+b.price,0),aiL=s.ai.reduce((a,b)=>a+b.price,0);
  return {plan,planList:p.price,seats,conv,ai,convL,aiL,addons:seats+conv+ai,total:Math.round((plan+seats+conv+ai)*100)/100};}
@@ -462,13 +465,15 @@ function groupView(){const g=grp(ui.group);
 
 function alertHTML(type,title,desc,acts){return `<div class="alert ${type}"><span class="ic">${ICON[type==='ok'?'ok':type==='bad'?'bad':type==='warn'?'warn':'info']}</span><div><div class="t">${title}</div>${desc?`<div class="d">${desc}</div>`:''}</div><div class="acts">${acts||''}</div></div>`;}
 
+function nameList(g){const ns=g.companies.map(c=>c.name);const pre=g.name+' ';const short=ns.map((n,i)=>i>0&&n.startsWith(pre)&&ns[0].startsWith(pre)?n.slice(pre.length):n);return short.length>1?short.slice(0,-1).join(', ')+' and '+short[short.length-1]:short[0];}
+const ATTENTION={gLL:[{c:1204,t:'No inbound flow configured',d:'No active inbound flow. Inbound messages from this company’s contacts aren’t being answered.'}]};
 function statusTab(g){
  const active=g.companies.filter(c=>c.status==='Active').length;
  let alerts='';
  if(!g.sub)alerts+=alertHTML('info','No subscription yet','Set up a subscription to define this customer’s price, conversations, agents and AI credits.',`<button class="btn primary sm" data-a="setup">Create subscription</button>`);
  if(g.paused)alerts+=alertHTML('warn','Subscription paused','This business group has no active companies, so its subscription is paused. It resumes when a company is reactivated.');
  const rows=g.companies.map(c=>`<tr><td>${idCell(c.id)}</td><td>${esc(c.name)}</td><td><button class="u num" data-a="peopleFrom" data-t="users" data-c="${c.id}">${c.users}</button></td><td><button class="u num" data-a="peopleFrom" data-t="agents" data-c="${c.id}">${c.agents}</button></td><td>${statusBadge(c.status)}</td><td><div class="rowacts">${c.status==='Active'?`<button class="btn sm" data-a="suspend" data-c="${c.id}">Suspend</button><button class="btn sm danger" data-a="churn" data-c="${c.id}">Churn</button>`:c.status==='Suspended'?`<button class="btn sm primary" data-a="reactivate" data-c="${c.id}">Reactivate</button><button class="btn sm danger" data-a="churn" data-c="${c.id}">Churn</button>`:''}</div></td></tr>`).join('');
- return `<div class="meta"><span>HubSpot ID<b class="mono">${g.hubspot}</b></span><span>CS owner<b>${esc(g.owner)}</b><button class="linkbtn" style="margin-left:8px" data-a="openOwner">Change</button></span></div>${alerts}
+ return `<div class="meta"><span>HubSpot ID<b class="mono">${g.hubspot}</b></span><span>CS owner<b>${esc(g.owner)}</b><button class="linkbtn" style="margin-left:8px" data-a="openOwner">Change</button></span></div>${alerts}${(()=>{const at=(ATTENTION[g.id]||[]).map(a=>({...a,co:g.companies.find(c=>c.id===a.c)})).filter(a=>a.co&&a.co.status!=='Churned');return at.length?`<div class="attn"><div class="sechead"><h2>Needs attention</h2><span class="sub">${at.length} warning${at.length>1?'s':''}</span></div>${at.map(a=>alertHTML('warn',`${esc(a.co.name)} · ${a.t}`,a.d)).join('')}</div>`:''})()}
  <div class="sechead"><h2>Companies</h2><span class="sub">Showing ${g.companies.length} ${g.companies.length===1?'company':'companies'}</span><div class="spacer"></div><button class="btn" data-a="openAdd">Add company</button></div>
  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Company</th><th>Users</th><th>Agents</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
  <p class="note">Suspended companies stop consuming. Usage they already generated still counts toward the shared limit for that cycle.</p>`;}
@@ -501,7 +506,8 @@ function editTab(g){const f=ui.form;const s=f.sub;const c=cost(s);const cur=g.su
   <div><button class="linkbtn" data-a="addBucket" data-type="${type}">+ Add ${label} package</button></div></div>`;
  const planErr=f.err&&f.err.plan;
  const sumLines=[];
- return `${g.companies.length>1?alertHTML('warn',`Editing ${esc(g.name)}’s shared subscription`,`Changes apply to all ${g.companies.length} companies in this business group.`):''}
+ const lowerNow=g.sub&&s.plan&&(()=>{const a=limits(g.sub),b=limits(s);return b.conv<a.conv||b.ai<a.ai||b.seats<a.seats})();
+ return `${g.companies.length>1?alertHTML('warn',`Editing ${esc(g.name)}’s shared subscription`,`Changes apply to all ${g.companies.length} companies in this business group (${esc(nameList(g))}).`):g.sub?alertHTML('info','Editing the active subscription','Current cycle: Nov 1 – Dec 1, 2026.'):''}${lowerNow?alertHTML('warn','This change lowers the subscription','Takes effect on Dec 1, 2026, when the current cycle ends.'):''}
  <div class="formgrid"><div style="display:flex;flex-direction:column;gap:20px;min-width:0">
  <div class="fsec"><h3>Plan</h3><div class="h">Sets the price and what’s included every month.</div><div class="fields">
   <div class="field"><label for="f-plan">Plan</label><select class="input ${planErr?'bad':''}" id="f-plan" data-a="fplan"><option value="" ${!s.plan?'selected':''} disabled>Select a plan...</option>${Object.keys(PLANS).map(p=>`<option value="${p}" ${p===s.plan?'selected':''}>${PLANS[p].name} — ${fmt(PLANS[p].price)}</option>`).join('')}</select>${planErr?`<span class="err">${ICON.bad} Pick a plan to create the subscription.</span>`:''}</div>
@@ -519,7 +525,7 @@ function editTab(g){const f=ui.form;const s=f.sub;const c=cost(s);const cur=g.su
   ${s.paidSeats?`<div class="line muted"><span>${s.paidSeats} paying agent seats</span><span class="num">${fmt(c.seats)}</span></div>`:''}
   ${s.conv.map(b=>`<div class="line muted"><span>${k(b.qty)} conversations${b.disc?' · '+b.disc+'% off':''}${b.rec?'':' · one-time'}</span><span class="num">${fmt(net(b.price,b.disc))}</span></div>`).join('')}
   ${s.ai.map(b=>`<div class="line muted"><span>${k(b.qty)} AI credits${b.disc?' · '+b.disc+'% off':''}${b.rec?'':' · one-time'}</span><span class="num">${fmt(net(b.price,b.disc))}</span></div>`).join('')}`:`<div class="muted">Pick a plan to see its price, conversations, agents and AI credits.</div>`}
-  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost" data-a="cancelEdit">Cancel</button><button class="btn primary" style="flex:1;justify-content:center" data-a="saveSub" ${f.disabled?'disabled':''}>${isNew?'Create subscription':'Save changes'}</button></div></aside></div>`;}
+  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost" data-a="cancelEdit">Cancel</button><button class="btn primary" style="flex:1;justify-content:center" data-a="saveSub" ${f.disabled||f.saving?'disabled':''}>${f.saving?'Creating…':isNew?'Create subscription':'Save changes'}</button></div></aside></div>`;}
 
 function peopleTab(g,kind){
  const cid=ui.people[g.id]||g.companies[0].id;const c=g.companies.find(x=>x.id===cid)||g.companies[0];
@@ -572,7 +578,7 @@ function createModal(m){
  const q=(m.q||'').toLowerCase();
  const opts=data.groups.filter(g=>!q||g.name.toLowerCase().includes(q)||g.hubspot.includes(q)).map(g=>({v:g.id,l:g.name,r:'HubSpot ID '+g.hubspot}));
  const sel=m.bg==='__new'?`${ICON.plus} Create new business group for this company`:m.bg?esc(grp(m.bg).name):'';
- let body=selector(m,{id:'c-bg',label:'Business group',placeholder:'Select a business group or create a new one',options:opts,selectedLabel:sel,searchPh:'Search by name or HubSpot ID',newLabel:'Create new business group for this company',err:m.err.bg});
+ let body=(m.serverErr?alertHTML('bad',m.serverErr,'Something went wrong on our side. Try again in a few minutes.'):'')+selector(m,{id:'c-bg',label:'Business group',placeholder:'Select a business group or create a new one',options:opts,selectedLabel:sel,searchPh:'Search by name or HubSpot ID',newLabel:'Create new business group for this company',err:m.err.bg});
  if(m.bg){
   body+=`<div class="field"><label for="c-name">Company name</label><input class="input ${m.err.name?'bad':''}" id="c-name" placeholder="e.g. Acme US" value="${esc(m.name)}" data-a="cname">${m.err.name?`<span class="err">${ICON.bad} ${m.err.name}</span>`:''}</div>`;
   if(m.bg==='__new'){
@@ -600,7 +606,7 @@ function ownerModal(m){const g=grp(ui.group);const q=(m.q||'').toLowerCase();
 function addModal(m){const g=grp(ui.group);const q=(m.q||'').toLowerCase();
  const opts=allCompanies().filter(c=>c.group.id!==g.id&&c.status!=='Churned'&&(!q||c.name.toLowerCase().includes(q)||String(c.id).includes(q))).map(c=>({v:c.id,l:c.name,r:'ID '+c.id}));
  let sel='';if(m.pick==='__new')sel=`${ICON.plus} Create new company`;else if(m.pick){const c=allCompanies().find(x=>x.id==m.pick);sel=esc(c.name);}
- let body=alertHTML('info','',`You can add any company. It leaves its current business group and moves into ${esc(g.name)}.`);
+ let body=(m.serverErr?alertHTML('bad',m.serverErr,'Something went wrong on our side. Try again in a few minutes.'):'')+alertHTML('info','',`You can add any company. It leaves its current business group and moves into ${esc(g.name)}.`);
  body+=selector(m,{id:'a-sel',label:'Company',placeholder:'Select a company or create a new one',options:opts,selectedLabel:sel,searchPh:'Search by name or ID',newLabel:'Create new company',err:m.err.pick});
  if(m.pick==='__new')body+=`<div class="field"><label for="a-name">Company name</label><input class="input ${m.err.name?'bad':''}" id="a-name" placeholder="e.g. ${esc(g.name)} AR" value="${esc(m.name||'')}" data-a="aname">${m.err.name?`<span class="err">${ICON.bad} ${m.err.name}</span>`:''}</div>`;
  else if(m.pick){const c=allCompanies().find(x=>x.id==m.pick);const from=c.group;
@@ -613,6 +619,7 @@ function addModal(m){const g=grp(ui.group);const q=(m.q||'').toLowerCase();
 
 /* ---------- actions ---------- */
 function openGroup(id,tab){ui.view='group';ui.group=id;ui.tab=tab||'status';ui.modal=null;window.scrollTo(0,0);}
+const NEEDCHECK='Check the HubSpot ID first. Click “Check ID”.';
 const companyById=id=>allCompanies().find(c=>c.id==id);
 function confirm(opts){ui.modal=Object.assign({type:'confirm'},opts);}
 
@@ -636,14 +643,14 @@ const A={
  rec(el){const b=ui.form.sub[el.dataset.type][+el.dataset.i];b.rec=!b.rec;},
  saveSub(){const g=grp(ui.group);const s=ui.form.sub;
   if(!s.plan){ui.form.err.plan=true;ui.form.disabled=true;return;}
-  if(!g.sub){g.sub=clone(s);g.paused=false;ui.tab='subscription';ui.form=null;toast('Subscription created for '+g.name);return;}
+  if(!g.sub){const f=ui.form;f.saving=true;setTimeout(()=>{if(ui.form!==f)return;g.sub=clone(s);g.paused=false;ui.tab='subscription';ui.form=null;toast('Subscription created for '+g.name);render();},900);return;}
   const a=limits(g.sub),b=limits(s);const lower=b.conv<a.conv||b.ai<a.ai||b.seats<a.seats;const ca=cost(g.sub).total,cb=cost(s).total;
   const diff=`${fmt(ca)} → ${fmt(cb)} per cycle (${cb>=ca?'+':'−'}${fmt(Math.abs(Math.round((cb-ca)*100)/100))})`;
   const u=data.usage[g.id];const below=u&&(b.conv<u.conv||b.ai<u.ai);
   let body=lower?alertHTML('warn','Takes effect on Dec 1, 2026',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} · ${diff}. ${PLANS[g.sub.plan].name} stays until then.`):alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name}`,diff+(g.companies.length>1?` · applies to all ${g.companies.length} companies`:''));
   if(lower&&below)body+=alertHTML('warn','Below current usage',`${k(u.conv)} conversations used this cycle; the new subscription includes ${k(b.conv)}.`);
   confirm({title:'Save changes?',body,ok:'Save changes',run(){if(lower){g.scheduled=clone(s);toast(`Changes saved · ${PLANS[s.plan].name} starts on Dec 1, 2026`);}else{g.sub=clone(s);toast('Subscription updated for '+g.name);}ui.tab='subscription';ui.form=null;}});},
- viewSched(){const g=grp(ui.group);const s=g.scheduled;ui.modal={type:'info',title:'Scheduled change',body:alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} on Dec 1, 2026`,`${fmt(cost(g.sub).total)} → ${fmt(cost(s).total)} per cycle. Scheduled by Lidia Paz today.`),extra:`<button class="btn outline" data-a="cancelSched">Cancel scheduled change</button>`};},
+ viewSched(){const g=grp(ui.group);const s=g.scheduled;ui.modal={type:'info',title:'Scheduled change',body:alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} on Dec 1, 2026`,`${fmt(cost(g.sub).total)} → ${fmt(cost(s).total)} per cycle (${cost(s).total>=cost(g.sub).total?'+':'−'}${fmt(Math.abs(Math.round((cost(s).total-cost(g.sub).total)*100)/100))}). Scheduled by Lidia Paz on Nov 12.`),extra:`<button class="btn outline" data-a="cancelSched">Cancel scheduled change</button>`};},
  cancelSched(){const g=grp(ui.group);confirm({title:'Cancel scheduled change?',body:alertHTML('warn',`${esc(g.name)} stays on ${PLANS[g.sub.plan].name}`,`The change to ${PLANS[g.scheduled.plan].name} on Dec 1 won’t happen.`),cancel:'Keep change',ok:'Cancel change',danger:true,run(){g.scheduled=null;toast(`Scheduled change canceled · ${g.name} stays on ${PLANS[g.sub.plan].name}`);}});},
  suspend(el){const g=grp(ui.group);const c=g.companies.find(x=>x.id==el.dataset.c);const last=g.companies.filter(x=>x.status==='Active').length===1;
   confirm({title:`Suspend ${esc(c.name)}?`,body:alertHTML('warn',last?`${esc(c.name)} is the last active company`:`${esc(c.name)} will be deactivated for the customer`,(last&&g.sub?'Suspending it pauses the business group’s subscription. ':'')+'Its users can’t log in to Treble and its channels and agents stop working. It stays in Admin as Suspended and you can reactivate it later.'),ok:'Suspend company',run(){c.status='Suspended';if(last&&g.sub)g.paused=true;toast(c.name+' suspended');}});},
@@ -673,18 +680,21 @@ const A={
  doCreate(){const m=ui.modal;const err={};
   if(!m.bg)err.bg='Select a business group or create a new one.';
   else{const nm=m.name.trim();
-   if(!nm)err.name='Enter a company name.';else if(allCompanies().some(c=>c.name.toLowerCase()===nm.toLowerCase()))err.name=`A company named “${esc(nm)}” already exists.`;
+   const eg=m.bg!=='__new'&&grp(m.bg);
+   if(!nm)err.name='Enter a company name.';else if(eg&&eg.companies.some(c=>c.name.toLowerCase()===nm.toLowerCase()))err.name=`${esc(eg.name)} already has a company named “${esc(nm)}”.`;else if(allCompanies().some(c=>c.name.toLowerCase()===nm.toLowerCase()))err.name=`A company named “${esc(nm)}” already exists.`;
    if(m.bg==='__new'){const bgn=(m.bgname.trim()||nm);
     if(bgn&&data.groups.some(g=>g.name.toLowerCase()===bgn.toLowerCase()))err.bgname=`A business group named “${esc(bgn)}” already exists. Pick it in Business group or use a different name.`;
-    if(!m.hsv.trim())err.hs='Enter the HubSpot ID and check it.';else if(m.hs.state!=='found'&&!m.err.hs)err.hs='Check the HubSpot ID first. Click “Check ID”.';else if(m.err.hs)err.hs=m.err.hs;}}
-  if(Object.values(err).some(Boolean)){m.err=err;m.open=false;return;}
+    if(!m.hsv.trim())err.hs='Enter the HubSpot ID and check it.';else if(m.hs.state!=='found'&&!m.err.hs)err.hs=NEEDCHECK;else if(m.err.hs)err.hs=m.err.hs;}}
+  if(Object.values(err).some(Boolean)){m.err=err;m.open=false;m.serverErr=null;return;}
+  if(/fail/i.test(m.name)){m.serverErr='Couldn’t create the company';return;}
   const id=data.nextId++;const comp={id,name:m.name.trim(),status:'Active',users:0,agents:0};
   if(m.bg==='__new'){const gid='g'+id;data.groups.unshift({id:gid,name:m.bgname.trim()||m.name.trim(),hubspot:m.hsv.trim(),owner:'Lidia Paz',companies:[comp],sub:null,scheduled:null,paused:false});openGroup(gid);}
   else{const g=grp(m.bg);g.companies.push(comp);openGroup(g.id);}
   toast(comp.name+' created');},
  doAdd(){const m=ui.modal;const g=grp(ui.group);
   if(!m.pick){m.err={pick:'Select a company or create a new one.'};m.open=false;return;}
-  if(m.pick==='__new'){const nm=(m.name||'').trim();if(!nm){m.err={name:'Enter a company name.'};return;}if(allCompanies().some(c=>c.name.toLowerCase()===nm.toLowerCase())){m.err={name:`A company named “${esc(nm)}” already exists.`};return;}
+  if(m.pick==='__new'){const nm=(m.name||'').trim();if(!nm){m.err={name:'Enter a company name.'};return;}if(g.companies.some(c=>c.name.toLowerCase()===nm.toLowerCase())){m.err={name:`${esc(g.name)} already has a company named “${esc(nm)}”.`};return;}if(allCompanies().some(c=>c.name.toLowerCase()===nm.toLowerCase())){m.err={name:`A company named “${esc(nm)}” already exists.`};return;}
+   if(/fail/i.test(nm)){m.serverErr='Couldn’t create the company';return;}
    g.companies.push({id:data.nextId++,name:nm,status:'Active',users:0,agents:0});ui.modal=null;toast(nm+' created in '+g.name);return;}
   const c=companyById(m.pick);const from=c.group;from.companies=from.companies.filter(x=>x.id!==c.id);
   g.companies.push({id:c.id,name:c.name,status:c.status,users:c.users,agents:c.agents});
@@ -709,7 +719,7 @@ document.addEventListener('input',e=>{const el=e.target;const a=el.dataset&&el.d
   case 'selSearch':m.q=el.value;break;
   case 'cname':m.name=el.value;m.err.name=null;if(m.err.bgname&&!m.bgname)m.err.bgname=null;break;
   case 'cbgname':m.bgname=el.value;m.err.bgname=null;break;
-  case 'chs':m.hsv=el.value;m.err.hs=null;m.hs={state:'idle'};break;
+  case 'chs':m.hsv=el.value;if(m.err.hs!==NEEDCHECK)m.err.hs=null;m.hs={state:'idle'};break;
   case 'aname':m.name=el.value;m.err.name=null;break;
   case 'ffree':f.sub.freeSeats=Math.max(0,+el.value||0);break;
   case 'fpaid':f.sub.paidSeats=Math.max(0,+el.value||0);break;
@@ -732,7 +742,7 @@ function renderTasks(){const el=document.getElementById('tasks');
  if(!ui.tasksOpen){el.innerHTML=`<button class="toggleTasks" data-t="open">Test tasks (${Object.values(ui.done).filter(Boolean).length}/${TASKS.length})</button>`;return;}
  el.innerHTML=`<div class="panel"><div class="row2"><h4>Test tasks</h4><button data-t="close">Hide</button></div>
  <ol>${TASKS.map((t,i)=>`<li class="${ui.done[i]?'done':''}"><input type="checkbox" id="task-${i}" data-t="done" data-i="${i}" ${ui.done[i]?'checked':''}><label for="task-${i}"><span>${t}</span></label></li>`).join('')}</ol>
- <details class="fac"><summary>Facilitator notes</summary><p style="margin:6px 0 0">HubSpot test IDs: <code>99999999</code> not found · <code>21847503</code> already linked to Lumen Academy · <code>00000000</code> HubSpot doesn’t respond · any other number is found.</p></details>
+ <details class="fac"><summary>Facilitator notes</summary><p style="margin:6px 0 0">HubSpot test IDs: <code>99999999</code> not found · <code>21847503</code> already linked to Lumen Academy · <code>00000000</code> HubSpot doesn’t respond · any other number is found.</p><p style="margin:6px 0 0">A company name containing <code>fail</code> simulates a server error when creating it.</p></details>
  <div class="row2"><span style="font-size:12px;color:#6b6790">Nothing here is saved.</span><button data-t="reset">Reset prototype</button></div></div>`;}
 document.getElementById('tasks').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;const t=b.dataset.t;
  if(t==='open'){ui.tasksOpen=true;renderTasks();}
