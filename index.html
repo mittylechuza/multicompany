@@ -99,7 +99,7 @@ tr.child td:nth-child(2){padding-left:28px}
 .lt-search input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:16px;color:var(--fg)}
 .lt-search input::placeholder{color:var(--faint)}
 .lt-tools .count{font-size:14px;color:var(--muted);white-space:nowrap}
-.lt-wrap{margin:0 calc(-1 * max(32px, env(safe-area-inset-right,0px))) 0 calc(-1 * max(32px, env(safe-area-inset-left,0px)));padding:0 max(32px, env(safe-area-inset-right,0px)) 0 max(32px, env(safe-area-inset-left,0px));border:1px solid var(--line-soft);border-radius:8px;overflow-x:auto}
+.lt-wrap{border:1px solid var(--line-soft);border-radius:8px;overflow-x:auto}
 .lt{min-width:760px}
 .lt-row{display:grid;grid-template-columns:85px minmax(160px,1fr) 184px 179px 179px;align-items:center;min-height:46px;padding:0 17px;border-bottom:1px solid var(--line-soft);font-size:14px}
 .lt>.lt-row:last-child,.lt>.lt-group:last-child{border-bottom:0}
@@ -299,7 +299,6 @@ td{white-space:nowrap}
 @media (max-width: 820px){
   .main{padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
   .nav{padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
-  .lt-wrap{margin:0 calc(-1 * max(16px, env(safe-area-inset-right,0px))) 0 calc(-1 * max(16px, env(safe-area-inset-left,0px)));padding:0 max(16px, env(safe-area-inset-right,0px)) 0 max(16px, env(safe-area-inset-left,0px))}
   .alert{grid-template-columns:18px minmax(0,1fr)}
   .alert .acts{grid-column:2}
   .card .row{padding:14px}
@@ -309,7 +308,6 @@ td{white-space:nowrap}
   .nav .btn{padding:0 12px;font-size:15px}
   .nav .btn.primary{padding:0 10px}
   .logo .wm{font-size:18px}
-  .lt-wrap{margin:0 calc(-1 * max(16px, env(safe-area-inset-right,0px))) 0 calc(-1 * max(16px, env(safe-area-inset-left,0px)));padding:0 max(16px, env(safe-area-inset-right,0px)) 0 max(16px, env(safe-area-inset-left,0px))}
   .lt-tools{flex-wrap:wrap;gap:8px 16px}
   .lt-search{flex-basis:100%}
   .mcard{padding:16px}
@@ -370,6 +368,10 @@ const CONV_PKG=[[5000,275],[10000,515],[19500,1000],[34500,1740]];
 const AI_PKG=[[500,140],[1000,275],[2000,550],[3500,965]];
 const MONTHS=['October 2026','November 2026','December 2026','January 2027','February 2027'];
 const CUR_MONTH='November 2026';
+const NEXT_CYCLE='Dec 1, 2026';
+const monthStart=m=>{const [mo,y]=m.split(' ');return mo.slice(0,3)+' 1, '+y;};
+// When a change applies: the starting month if it's in the future; otherwise next cycle for lower limits, right away for the rest
+const effectiveDate=(s,lower)=>s.start&&s.start!==CUR_MONTH?monthStart(s.start):lower?NEXT_CYCLE:null;
 const COLORS=['#b9adf7','#5fc7b3','#e58a64','#7ca7f0'];
 
 function initial(){
@@ -474,7 +476,7 @@ function statusTab(g){
  if(g.paused)alerts+=alertHTML('warn','Subscription paused','This business group has no active companies, so its subscription is paused. It resumes when a company is reactivated.');
  const rows=g.companies.map(c=>`<tr><td>${idCell(c.id)}</td><td>${esc(c.name)}</td><td><button class="u num" data-a="peopleFrom" data-t="users" data-c="${c.id}">${c.users}</button></td><td><button class="u num" data-a="peopleFrom" data-t="agents" data-c="${c.id}">${c.agents}</button></td><td>${statusBadge(c.status)}</td><td><div class="rowacts">${c.status==='Active'?`<button class="btn sm" data-a="suspend" data-c="${c.id}">Suspend</button><button class="btn sm danger" data-a="churn" data-c="${c.id}">Churn</button>`:c.status==='Suspended'?`<button class="btn sm primary" data-a="reactivate" data-c="${c.id}">Reactivate</button><button class="btn sm danger" data-a="churn" data-c="${c.id}">Churn</button>`:''}</div></td></tr>`).join('');
  return `<div class="meta"><span>HubSpot ID<b class="mono">${g.hubspot}</b></span><span>CS owner<b>${esc(g.owner)}</b><button class="linkbtn" style="margin-left:8px" data-a="openOwner">Change</button></span></div>${alerts}${(()=>{const at=(ATTENTION[g.id]||[]).map(a=>({...a,co:g.companies.find(c=>c.id===a.c)})).filter(a=>a.co&&a.co.status!=='Churned');return at.length?`<div class="attn"><div class="sechead"><h2>Needs attention</h2><span class="sub">${at.length} warning${at.length>1?'s':''}</span></div>${at.map(a=>alertHTML('warn',`${esc(a.co.name)} · ${a.t}`,a.d)).join('')}</div>`:''})()}
- <div class="sechead"><h2>Companies</h2><span class="sub">Showing ${g.companies.length} ${g.companies.length===1?'company':'companies'}</span><div class="spacer"></div><button class="btn" data-a="openAdd">Add company</button></div>
+ <div class="sechead"><h2>Companies</h2><span class="sub">Showing ${g.companies.length} ${g.companies.length===1?'company':'companies'}</span><div class="spacer"></div><button class="btn" data-a="openAdd">${ICON.plus}Add company</button></div>
  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Company</th><th>Users</th><th>Agents</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
  <p class="note">Suspended companies stop consuming. Usage they already generated still counts toward the shared limit for that cycle.</p>`;}
 
@@ -485,7 +487,7 @@ function subTab(g){
  const open=ui.addonsOpen||{};
  const bucketRows=(arr,label)=>arr.map((b,i)=>`<div class="addon sub"><span>Bucket ${i+1}${b.disc?` · <span class="disc">${b.disc}% discount</span>`:''}${b.rec?'':' · one-time'}</span><span class="num hide-s">+${k(b.qty)}</span><span class="hide-s"></span><span class="right num">${b.disc?`<span class="strike">${fmt(b.price)}</span>`:''}${fmt(net(b.price,b.disc))}</span></div>`).join('');
  const cat=(key,label,qty,count,list,val,detail)=>`<div class="addon"><button class="x" style="font-size:12px" data-a="toggleAddon" data-k="${key}" aria-label="Expand ${label}"><span class="chev ${open[key]?'open':''}">${ICON.chev}</span></button><span>${label}</span><span class="num hide-s">${qty}</span><span class="hide-s">${count}</span><span class="right num">${list>val?`<span class="strike">${fmt(list)}</span>`:''}${fmt(val)}</span></div>${open[key]?detail:''}`;
- const sch=g.scheduled?alertHTML('info',`Scheduled change · ${PLANS[g.scheduled.plan].name} from Dec 1, 2026`,`All ${g.companies.length} companies move to ${PLANS[g.scheduled.plan].name} (${fmt(cost(g.scheduled).total)} per cycle). ${PLANS[s.plan].name} stays until then.`,`<button class="linkbtn" data-a="viewSched">View scheduled change</button><button class="btn sm outline" data-a="cancelSched">Cancel scheduled change</button>`):'';
+ const sch=g.scheduled?alertHTML('info',`Scheduled change · ${PLANS[g.scheduled.plan].name} from ${g.scheduled.eff}`,`All ${g.companies.length} companies move to ${PLANS[g.scheduled.plan].name} (${fmt(cost(g.scheduled).total)} per cycle). ${PLANS[s.plan].name} stays until then.`,`<button class="linkbtn" data-a="viewSched">View scheduled change</button><button class="btn sm outline" data-a="cancelSched">Cancel scheduled change</button>`):'';
  const pct=(a,b)=>b?Math.min(100,Math.round(a/b*100)):0;
  return `${sch}<div class="sechead"><h2>Plan & Add-ons</h2>${multi?`<span class="sub">Shared by all ${g.companies.length} companies</span>`:''}<div class="spacer"></div><button class="btn" data-a="edit">Edit subscription</button></div>
  <div class="card"><div class="row"><div><div>Cost per cycle</div><div class="note">Nov 1 – Dec 1, 2026</div></div><div class="big num">${fmt(c.total)}</div></div>
@@ -507,12 +509,12 @@ function editTab(g){const f=ui.form;const s=f.sub;const c=cost(s);const cur=g.su
  const planErr=f.err&&f.err.plan;
  const sumLines=[];
  const lowerNow=g.sub&&s.plan&&(()=>{const a=limits(g.sub),b=limits(s);return b.conv<a.conv||b.ai<a.ai||b.seats<a.seats})();
- return `${g.companies.length>1?alertHTML('warn',`Editing ${esc(g.name)}’s shared subscription`,`Changes apply to all ${g.companies.length} companies in this business group (${esc(nameList(g))}).`):g.sub?alertHTML('info','Editing the active subscription','Current cycle: Nov 1 – Dec 1, 2026.'):''}${lowerNow?alertHTML('warn','This change lowers the subscription','Takes effect on Dec 1, 2026, when the current cycle ends.'):''}
+ return `${g.companies.length>1?alertHTML('warn',`Editing ${esc(g.name)}’s shared subscription`,`Changes apply to all ${g.companies.length} companies in this business group (${esc(nameList(g))}).`):g.sub?alertHTML('info','Editing the active subscription','Current cycle: Nov 1 – Dec 1, 2026.'):''}${(()=>{if(!g.sub||!s.plan)return '';const eff=effectiveDate(s,lowerNow);if(!eff)return '';const when=s.start!==CUR_MONTH?'the starting month you picked':'when the current cycle ends';return lowerNow?alertHTML('warn','This change lowers the subscription',`Takes effect on ${eff}, ${when}.`):alertHTML('info',`Takes effect on ${eff}`,`Starts with the month you picked. ${PLANS[g.sub.plan].name} stays until then.`);})()}
  <div class="formgrid"><div style="display:flex;flex-direction:column;gap:20px;min-width:0">
  <div class="fsec"><h3>Plan</h3><div class="h">Sets the price and what’s included every month.</div><div class="fields">
   <div class="field"><label for="f-plan">Plan</label><select class="input ${planErr?'bad':''}" id="f-plan" data-a="fplan"><option value="" ${!s.plan?'selected':''} disabled>Select a plan...</option>${Object.keys(PLANS).map(p=>`<option value="${p}" ${p===s.plan?'selected':''}>${PLANS[p].name} — ${fmt(PLANS[p].price)}</option>`).join('')}</select>${planErr?`<span class="err">${ICON.bad} Pick a plan to create the subscription.</span>`:''}</div>
   <div class="field"><label for="f-pdisc">Discount <span class="opt">(optional)</span></label>${discSel('f-pdisc',s.planDiscount,'pdisc')}</div>
-  <div class="field"><label for="f-start">Starting month</label><select class="input" id="f-start" data-a="fstart">${MONTHS.map(m=>`<option ${m===s.start?'selected':''}>${m}</option>`).join('')}</select></div></div></div>
+  <div class="field"><label for="f-start">Starting month</label><select class="input" id="f-start" data-a="fstart">${MONTHS.slice(MONTHS.indexOf(CUR_MONTH)).map(m=>`<option ${m===s.start?'selected':''}>${m}</option>`).join('')}</select></div></div></div>
  <div class="fsec"><h3>Agent seats</h3><div class="h">Added on top of the agent seats included in the plan.</div><div class="fields">
   <div class="field"><label for="f-free">Extra free agent seats</label><input class="input num" id="f-free" type="number" min="0" value="${s.freeSeats}" data-a="ffree"></div>
   <div class="field"><label for="f-paid">Extra paying agent seats</label><input class="input num" id="f-paid" type="number" min="0" value="${s.paidSeats}" data-a="fpaid"></div>
@@ -643,15 +645,16 @@ const A={
  rec(el){const b=ui.form.sub[el.dataset.type][+el.dataset.i];b.rec=!b.rec;},
  saveSub(){const g=grp(ui.group);const s=ui.form.sub;
   if(!s.plan){ui.form.err.plan=true;ui.form.disabled=true;return;}
-  if(!g.sub){const f=ui.form;f.saving=true;setTimeout(()=>{if(ui.form!==f)return;g.sub=clone(s);g.paused=false;ui.tab='subscription';ui.form=null;toast('Subscription created for '+g.name);render();},900);return;}
+  if(!g.sub){const f=ui.form;f.saving=true;setTimeout(()=>{if(ui.form!==f)return;g.sub=clone(s);g.paused=false;ui.tab='subscription';ui.form=null;toast('Subscription created for '+g.name+(s.start!==CUR_MONTH?' · starts on '+monthStart(s.start):''));render();},900);return;}
   const a=limits(g.sub),b=limits(s);const lower=b.conv<a.conv||b.ai<a.ai||b.seats<a.seats;const ca=cost(g.sub).total,cb=cost(s).total;
   const diff=`${fmt(ca)} → ${fmt(cb)} per cycle (${cb>=ca?'+':'−'}${fmt(Math.abs(Math.round((cb-ca)*100)/100))})`;
   const u=data.usage[g.id];const below=u&&(b.conv<u.conv||b.ai<u.ai);
-  let body=lower?alertHTML('warn','Takes effect on Dec 1, 2026',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} · ${diff}. ${PLANS[g.sub.plan].name} stays until then.`):alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name}`,diff+(g.companies.length>1?` · applies to all ${g.companies.length} companies`:''));
+  const eff=effectiveDate(s,lower);
+  let body=eff?alertHTML(lower?'warn':'info',`Takes effect on ${eff}`,`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} · ${diff}. ${PLANS[g.sub.plan].name} stays until then.`):alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name}`,diff+(g.companies.length>1?` · applies to all ${g.companies.length} companies`:''));
   if(lower&&below)body+=alertHTML('warn','Below current usage',`${k(u.conv)} conversations used this cycle; the new subscription includes ${k(b.conv)}.`);
-  confirm({title:'Save changes?',body,ok:'Save changes',run(){if(lower){g.scheduled=clone(s);toast(`Changes saved · ${PLANS[s.plan].name} starts on Dec 1, 2026`);}else{g.sub=clone(s);toast('Subscription updated for '+g.name);}ui.tab='subscription';ui.form=null;}});},
- viewSched(){const g=grp(ui.group);const s=g.scheduled;ui.modal={type:'info',title:'Scheduled change',body:alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} on Dec 1, 2026`,`${fmt(cost(g.sub).total)} → ${fmt(cost(s).total)} per cycle (${cost(s).total>=cost(g.sub).total?'+':'−'}${fmt(Math.abs(Math.round((cost(s).total-cost(g.sub).total)*100)/100))}). Scheduled by Lidia Paz on Nov 12.`),extra:`<button class="btn outline" data-a="cancelSched">Cancel scheduled change</button>`};},
- cancelSched(){const g=grp(ui.group);confirm({title:'Cancel scheduled change?',body:alertHTML('warn',`${esc(g.name)} stays on ${PLANS[g.sub.plan].name}`,`The change to ${PLANS[g.scheduled.plan].name} on Dec 1 won’t happen.`),cancel:'Keep change',ok:'Cancel change',danger:true,run(){g.scheduled=null;toast(`Scheduled change canceled · ${g.name} stays on ${PLANS[g.sub.plan].name}`);}});},
+  confirm({title:'Save changes?',body,ok:'Save changes',run(){if(eff){g.scheduled=Object.assign(clone(s),{eff});toast(`Changes saved · ${PLANS[s.plan].name} starts on ${eff}`);}else{g.sub=clone(s);toast('Subscription updated for '+g.name);}ui.tab='subscription';ui.form=null;}});},
+ viewSched(){const g=grp(ui.group);const s=g.scheduled;ui.modal={type:'info',title:'Scheduled change',body:alertHTML('info',`${PLANS[g.sub.plan].name} → ${PLANS[s.plan].name} on ${s.eff}`,`${fmt(cost(g.sub).total)} → ${fmt(cost(s).total)} per cycle (${cost(s).total>=cost(g.sub).total?'+':'−'}${fmt(Math.abs(Math.round((cost(s).total-cost(g.sub).total)*100)/100))}). Scheduled by Lidia Paz on Nov 12.`),extra:`<button class="btn outline" data-a="cancelSched">Cancel scheduled change</button>`};},
+ cancelSched(){const g=grp(ui.group);confirm({title:'Cancel scheduled change?',body:alertHTML('warn',`${esc(g.name)} stays on ${PLANS[g.sub.plan].name}`,`The change to ${PLANS[g.scheduled.plan].name} on ${g.scheduled.eff} won’t happen.`),cancel:'Keep change',ok:'Cancel change',danger:true,run(){g.scheduled=null;toast(`Scheduled change canceled · ${g.name} stays on ${PLANS[g.sub.plan].name}`);}});},
  suspend(el){const g=grp(ui.group);const c=g.companies.find(x=>x.id==el.dataset.c);const last=g.companies.filter(x=>x.status==='Active').length===1;
   confirm({title:`Suspend ${esc(c.name)}?`,body:alertHTML('warn',last?`${esc(c.name)} is the last active company`:`${esc(c.name)} will be deactivated for the customer`,(last&&g.sub?'Suspending it pauses the business group’s subscription. ':'')+'Its users can’t log in to Treble and its channels and agents stop working. It stays in Admin as Suspended and you can reactivate it later.'),ok:'Suspend company',run(){c.status='Suspended';if(last&&g.sub)g.paused=true;toast(c.name+' suspended');}});},
  reactivate(el){const g=grp(ui.group);const c=g.companies.find(x=>x.id==el.dataset.c);
